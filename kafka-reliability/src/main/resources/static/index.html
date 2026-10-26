@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7fb">
+  <meta name="description" content="Event reliability console — monitor Kafka order events, dead letters, and processed orders.">
+  <title>Kafka Reliability | Operations</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="/" data-view-link="overview">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span><strong>streamline</strong><small>By Anye Odysseus</small></span>
+      </a>
+
+      <div class="nav-label" aria-hidden="true">Workspace</div>
+      <nav class="primary-nav" aria-label="Main navigation">
+        <button class="nav-item active" type="button" data-view-link="overview" aria-current="page">
+          <span class="nav-icon" aria-hidden="true">▦</span>Overview
+        </button>
+        <button class="nav-item" type="button" data-view-link="events">
+          <span class="nav-icon" aria-hidden="true">↗</span>Event stream
+        </button>
+        <button class="nav-item" type="button" data-view-link="orders">
+          <span class="nav-icon" aria-hidden="true">▤</span>Orders
+        </button>
+        <button class="nav-item" type="button" data-view-link="dead-letters">
+          <span class="nav-icon" aria-hidden="true">⚑</span>Dead letters
+          <span class="nav-count" id="nav-dlt-count">—</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="connection-card" role="status" aria-live="polite" aria-atomic="true">
+          <span class="connection-dot" id="connection-dot" aria-hidden="true"></span>
+          <span>
+            <strong id="connection-label">Checking backend</strong>
+            <small id="connection-detail">Connecting to API…</small>
+          </span>
+        </div>
+        <div class="sidebar-foot" aria-hidden="true">KAFKA · MYSQL · SPRING BOOT</div>
+      </div>
+    </aside>
+
+    <main class="main-content" id="main-content">
+      <header class="topbar">
+        <div class="breadcrumb">
+          <span>Workspace</span>
+          <span class="breadcrumb-separator" aria-hidden="true">/</span>
+          <strong id="view-breadcrumb">Overview</strong>
+        </div>
+        <div class="top-actions">
+          <span class="updated-label" id="updated-label">Waiting for data</span>
+          <button class="icon-button" id="refresh-button" type="button" aria-label="Refresh data" title="Refresh data">
+            <span aria-hidden="true">↻</span>
+          </button>
+          <span class="avatar" role="img" aria-label="ANYE ODYSSEUS">AO</span>
+        </div>
+      </header>
+
+      <div class="page-wrap">
+
+        <section class="view active" id="overview-view" aria-labelledby="overview-heading">
+          <div class="page-heading">
+            <div>
+              <div class="eyebrow">System overview</div>
+              <h1 id="overview-heading" tabindex="-1">Your event pipeline, at a glance.</h1>
+              <p class="subtitle">Monitor order processing, delivery health, and events that need attention.</p>
+            </div>
+            <button class="button button-primary" type="button" data-view-link="publish">
+              <span aria-hidden="true">＋</span> Publish event
+            </button>
+          </div>
+
+          <div class="metric-grid">
+            <article class="metric-card">
+              <div class="metric-top">
+                <span class="metric-icon icon-blue" aria-hidden="true">↗</span>
+                <span class="metric-period">All events</span>
+              </div>
+              <div class="metric-value" id="metric-events">—</div>
+              <div class="metric-caption">Tracked events</div>
+              <div class="metric-foot">Across all statuses</div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-top">
+                <span class="metric-icon icon-green" aria-hidden="true">✓</span>
+                <span class="metric-period">Completed</span>
+              </div>
+              <div class="metric-value" id="metric-orders">—</div>
+              <div class="metric-caption">Orders processed</div>
+              <div class="metric-foot">Persisted successfully</div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-top">
+                <span class="metric-icon icon-amber" aria-hidden="true">◷</span>
+                <span class="metric-period">In flight</span>
+              </div>
+              <div class="metric-value" id="metric-pending">—</div>
+              <div class="metric-caption">Awaiting outcome</div>
+              <div class="metric-foot">Published or publishing</div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-top">
+                <span class="metric-icon icon-red" aria-hidden="true">⚑</span>
+                <span class="metric-period">Needs review</span>
+              </div>
+              <div class="metric-value" id="metric-dead">—</div>
+              <div class="metric-caption">Dead-lettered</div>
+              <div class="metric-foot">Failed after retries</div>
+            </article>
+          </div>
+
+          <div class="dashboard-grid">
+            <section class="panel activity-panel">
+              <div class="panel-heading">
+                <div>
+                  <h2>Recent events</h2>
+                  <p>Latest activity flowing through your pipeline</p>
+                </div>
+                <button class="text-button" type="button" data-view-link="events">
+                  View all <span aria-hidden="true">→</span>
+                </button>
+              </div>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">Event</th>
+                      <th scope="col">Order</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Updated</th>
+                    </tr>
+                  </thead>
+                  <tbody id="recent-events-body">
+                    <tr><td colspan="4" class="empty-cell">Loading events…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="panel pipeline-panel">
+              <div class="panel-heading">
+                <div>
+                  <h2>Pipeline health</h2>
+                  <p>Service connectivity</p>
+                </div>
+                <span class="health-pulse" id="health-pulse" aria-hidden="true"></span>
+              </div>
+              <div class="pipeline-flow">
+                <div class="pipeline-node">
+                  <span class="pipeline-symbol" aria-hidden="true">API</span>
+                  <span><strong>Producer API</strong><small>Order event intake</small></span>
+                  <span class="node-state" id="api-state">Checking</span>
+                </div>
+                <div class="flow-line" aria-hidden="true"></div>
+                <div class="pipeline-node">
+                  <span class="pipeline-symbol kafka-symbol" aria-hidden="true">K</span>
+                  <span><strong>Kafka</strong><small>orders topic</small></span>
+                  <span class="node-state" id="kafka-state">Checking</span>
+                </div>
+                <div class="flow-line" aria-hidden="true"></div>
+                <div class="pipeline-node">
+                  <span class="pipeline-symbol db-symbol" aria-hidden="true">DB</span>
+                  <span><strong>MySQL</strong><small>Order persistence</small></span>
+                  <span class="node-state" id="db-state">Checking</span>
+                </div>
+              </div>
+              <div class="pipeline-note">
+                <span aria-hidden="true">i</span>
+                <span>Pipeline indicators reflect API read availability, not direct broker or database health checks.</span>
+              </div>
+            </section>
+          </div>
+
+          <div class="dashboard-footer">
+            <span class="footer-check" aria-hidden="true">✓</span>
+            Event accepted by Kafka is not the same as order processing completed.
+          </div>
+        </section>
+
+        <section class="view" id="publish-view" aria-labelledby="publish-heading">
+          <div class="page-heading">
+            <div>
+              <div class="eyebrow">Event producer</div>
+              <h1 id="publish-heading" tabindex="-1">Publish an order event</h1>
+              <p class="subtitle">Send an event into Kafka and follow its processing status.</p>
+            </div>
+          </div>
+
+          <div class="publish-layout">
+            <section class="panel form-panel">
+              <div class="panel-heading">
+                <div>
+                  <h2>Event details</h2>
+                  <p>Fields marked required must be provided.</p>
+                </div>
+                <span class="form-tag">JSON · ORDERS</span>
+              </div>
+
+              <form id="publish-form" novalidate>
+                <label class="field-label" for="order-id">
+                  Order ID <span>Required</span>
+                </label>
+                <input
+                  id="order-id" name="orderId" type="text"
+                  maxlength="100" placeholder="e.g. ORD-10482"
+                  autocomplete="off" spellcheck="false" required>
+
+                <label class="field-label" for="order-status">
+                  Order status <span>Required</span>
+                </label>
+                <select id="order-status" name="status" required>
+                  <option value="CREATED">Created</option>
+                  <option value="PAID">Paid</option>
+                  <option value="PROCESSING">Processing</option>
+                  <option value="SHIPPED">Shipped</option>
+                  <option value="DELIVERED">Delivered</option>
+                  <option value="CANCELLED">Cancelled</option>
+                </select>
+
+                <label class="field-label" for="event-id">
+                  Event ID <span>Optional</span>
+                </label>
+                <input
+                  id="event-id" name="eventId" type="text"
+                  maxlength="100" placeholder="Generated automatically if empty"
+                  autocomplete="off" spellcheck="false">
+
+                <div class="form-divider" aria-hidden="true"></div>
+
+                <label class="toggle-row" for="should-fail">
+                  <span>
+                    <strong>Simulate processing failure</strong>
+                    <small>Useful for testing retries and dead-letter handling.</small>
+                  </span>
+                  <input id="should-fail" name="shouldFail" type="checkbox">
+                </label>
+
+                <button class="button button-primary submit-button" type="submit" id="publish-submit">
+                  <span aria-hidden="true">↑</span> Publish to Kafka
+                </button>
+              </form>
+
+              <div class="form-feedback" id="publish-feedback" role="status" aria-live="polite"></div>
+            </section>
+
+            <aside class="publish-aside">
+              <div class="panel note-panel">
+                <div class="note-icon" aria-hidden="true">i</div>
+                <h3>What happens next?</h3>
+                <ol class="steps-list">
+                  <li>
+                    <span aria-hidden="true">1</span>
+                    <div><strong>Accepted</strong><small>Kafka acknowledges the message.</small></div>
+                  </li>
+                  <li>
+                    <span aria-hidden="true">2</span>
+                    <div><strong>Processed</strong><small>The consumer validates and persists the order.</small></div>
+                  </li>
+                  <li>
+                    <span aria-hidden="true">3</span>
+                    <div><strong>Recovered if needed</strong><small>Retries run before a failed event reaches the DLT.</small></div>
+                  </li>
+                </ol>
+                <p class="small-warning">
+                  A successful publish response does not guarantee processing has completed.
+                </p>
+              </div>
+
+              <div class="json-preview">
+                <div class="preview-head">
+                  <span>Request preview</span>
+                  <span class="preview-dot" aria-hidden="true"></span>
+                </div>
+                <pre id="json-preview">{
+                  "orderId": "",
+                  "status": "CREATED",
+                  "shouldFail": false
+                }</pre>
+              </div>
+            </aside>
+          </div>
+        </section>
+        <section class="view" id="events-view" aria-labelledby="events-heading">
+          <div class="page-heading">
+            <div>
+              <div class="eyebrow">Observability</div>
+              <h1 id="events-heading" tabindex="-1">Event stream</h1>
+              <p class="subtitle">Inspect status, delivery attempts, and recent processing activity.</p>
+            </div>
+            <button class="button button-primary" type="button" data-view-link="publish">
+              <span aria-hidden="true">＋</span> Publish event
+            </button>
+          </div>
+
+          <section class="panel list-panel">
+            <div class="list-toolbar">
+              <div>
+                <h2>Tracked events</h2>
+                <p id="events-total">Loading events…</p>
+              </div>
+              <div class="toolbar-controls">
+                <label class="visually-hidden" for="events-filter">Filter events by status</label>
+                <select id="events-filter" class="filter-select">
+                  <option value="">All statuses</option>
+                  <option value="PUBLISHING">Publishing</option>
+                  <option value="PUBLISHED">Published</option>
+                  <option value="PROCESSED">Processed</option>
+                  <option value="DUPLICATE">Duplicate</option>
+                  <option value="DEAD_LETTERED">Dead-lettered</option>
+                  <option value="PUBLISH_FAILED">Publish failed</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Event ID</th>
+                    <th scope="col">Order ID</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Attempts</th>
+                    <th scope="col">Last error</th>
+                    <th scope="col">Updated</th>
+                  </tr>
+                </thead>
+                <tbody id="events-body">
+                  <tr><td colspan="6" class="empty-cell">Loading events…</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination">
+              <span id="events-page-label">Page 1</span>
+              <div>
+                <button class="page-button" id="events-prev" type="button" aria-label="Previous page of events">← Previous</button>
+                <button class="page-button" id="events-next" type="button" aria-label="Next page of events">Next →</button>
+              </div>
+            </div>
+          </section>
+        </section>
+        <section class="view" id="orders-view" aria-labelledby="orders-heading">
+          <div class="page-heading">
+            <div>
+              <div class="eyebrow">Processed data</div>
+              <h1 id="orders-heading" tabindex="-1">Orders</h1>
+              <p class="subtitle">Orders successfully persisted by the consumer.</p>
+            </div>
+          </div>
+
+          <section class="panel list-panel">
+            <div class="list-toolbar">
+              <div>
+                <h2>Processed orders</h2>
+                <p id="orders-total">Loading orders…</p>
+              </div>
+              <div class="toolbar-controls">
+                <label class="visually-hidden" for="orders-filter">Filter orders by status</label>
+                <input class="filter-input" id="orders-filter" type="search" placeholder="Filter by status" autocomplete="off">
+              </div>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Order ID</th>
+                    <th scope="col">Event ID</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Created</th>
+                  </tr>
+                </thead>
+                <tbody id="orders-body">
+                  <tr><td colspan="4" class="empty-cell">Loading orders…</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination">
+              <span id="orders-page-label">Page 1</span>
+              <div>
+                <button class="page-button" id="orders-prev" type="button" aria-label="Previous page of orders">← Previous</button>
+                <button class="page-button" id="orders-next" type="button" aria-label="Next page of orders">Next →</button>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="dead-letters-view" aria-labelledby="dlt-heading">
+          <div class="page-heading">
+            <div>
+              <div class="eyebrow">Recovery</div>
+              <h1 id="dlt-heading" tabindex="-1">Dead letters</h1>
+              <p class="subtitle">Events that exhausted retries and were routed to the dead-letter topic.</p>
+            </div>
+          </div>
+
+          <div class="callout callout-amber" role="note">
+            <span aria-hidden="true">⚑</span>
+            <p>This view shows event tracking data and the last failure reason. Raw Kafka DLT records and replay controls are not exposed by the backend yet.</p>
+          </div>
+
+          <section class="panel list-panel">
+            <div class="list-toolbar">
+              <div>
+                <h2>Needs investigation</h2>
+                <p id="dlt-total">Loading dead-letter events…</p>
+              </div>
+              <span class="dlt-label"><span aria-hidden="true"></span> orders.DLT</span>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Event ID</th>
+                    <th scope="col">Order ID</th>
+                    <th scope="col">Attempts</th>
+                    <th scope="col">Last error</th>
+                    <th scope="col">Updated</th>
+                  </tr>
+                </thead>
+                <tbody id="dlt-body">
+                  <tr><td colspan="5" class="empty-cell">Loading dead-letter events…</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination">
+              <span id="dlt-page-label">Page 1</span>
+              <div>
+                <button class="page-button" id="dlt-prev" type="button" aria-label="Previous page of dead-letter events">← Previous</button>
+                <button class="page-button" id="dlt-next" type="button" aria-label="Next page of dead-letter events">Next →</button>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <footer class="page-footer">
+          STREAMLINE <span aria-hidden="true">·</span> EVENT RELIABILITY CONSOLE
+          <span class="footer-version">API-backed · Auto-refresh every 10 seconds</span>
+        </footer>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>
